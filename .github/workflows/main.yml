@@ -1,4 +1,4 @@
-name: Build Egida Driver
+name: Build Egida Driver (Windows 2022)
 
 on:
   push:
@@ -7,29 +7,36 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest # 官方镜像，windows-2025-vs2026 不存在
-    env:
-      SOLUTION: Egida.sln
-      CONFIG: Release
-      PLATFORM: x64
+    runs-on: windows-2022
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Restore NuGet packages (WDK NuGet)
-        run: msbuild ${{ env.SOLUTION }} /t:Restore /p:Configuration=${{ env.CONFIG }} /p:Platform=${{ env.PLATFORM }}
+      # 方案 A：直接编译（利用 runner 预装的 WDK 22H2）
+      # 如果 Egida 项目文件已适配 runner 上的 WDK 版本，这一步通常能成功
+      - name: Build Solution (Direct)
+        shell: cmd
+        run: |
+          msbuild Egida.sln /p:Configuration=Release /p:Platform=x64
 
-      - name: Build Driver Solution
-        run: msbuild ${{ env.SOLUTION }} /p:Configuration=${{ env.CONFIG }} /p:Platform=${{ env.PLATFORM }}
+      # 方案 B：如果方案 A 失败（例如提示 ntifs.h 找不到或 WDK 版本不匹配）
+      # 注释掉上面的“Build Solution (Direct)”，取消下面步骤的注释，使用 NuGet 还原 WDK
+      # - name: Restore WDK NuGet (Fallback)
+      #   run: msbuild Egida.sln /t:Restore /p:Configuration=Release /p:Platform=x64
+      #
+      # - name: Build Solution (NuGet WDK)
+      #   shell: cmd
+      #   run: |
+      #     msbuild Egida.sln /p:Configuration=Release /p:Platform=x64
 
       - name: Upload Driver Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: egida-driver
+          name: egida-driver-x64
           path: |
             x64\Release\*.sys
             x64\Release\*.inf
