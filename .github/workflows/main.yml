@@ -1,0 +1,38 @@
+name: Build Egida Driver
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:  # 允许你手动触发构建
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026  # 自带 VS 2026，兼容 WDK
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install WDK
+        shell: powershell
+        run: |
+          # GitHub 托管的 runner 默认可能没有最新 WDK，需要手动安装
+          # 这里使用 winget 安装 WDK（适用于 Windows 11 24H2 / Win10+）
+          winget install Microsoft.WindowsWDK.10.0.26100 --accept-source-agreements --accept-package-agreements --silent
+
+      - name: Build Solution
+        shell: cmd
+        run: |
+          # 根据你仓库中实际 .sln 文件的路径修改下面这一行
+          msbuild Egida.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Upload Driver Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: egida-driver
+          path: |
+            out\x64\Release\*.sys
+            out\x64\Release\*.inf
