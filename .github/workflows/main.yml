@@ -7,7 +7,11 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2025-vs2026
+    runs-on: windows-latest # 官方镜像，windows-2025-vs2026 不存在
+    env:
+      SOLUTION: Egida.sln
+      CONFIG: Release
+      PLATFORM: x64
 
     steps:
       - name: Checkout
@@ -16,15 +20,11 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      # 移除 winget 安装 WDK 的步骤，改用 NuGet 还原
-      # 如果你的项目没有 packages.config，这一步会依靠 vcxproj 中的 PackageReference 自动还原
-      - name: Restore NuGet packages
-        run: msbuild Egida.sln /t:Restore /p:Configuration=Release /p:Platform=x64
+      - name: Restore NuGet packages (WDK NuGet)
+        run: msbuild ${{ env.SOLUTION }} /t:Restore /p:Configuration=${{ env.CONFIG }} /p:Platform=${{ env.PLATFORM }}
 
-      - name: Build Solution
-        shell: cmd
-        run: |
-          msbuild Egida.sln /p:Configuration=Release /p:Platform=x64
+      - name: Build Driver Solution
+        run: msbuild ${{ env.SOLUTION }} /p:Configuration=${{ env.CONFIG }} /p:Platform=${{ env.PLATFORM }}
 
       - name: Upload Driver Artifact
         uses: actions/upload-artifact@v4
